@@ -9,20 +9,15 @@ export class ActionExecutor {
     this.page = page;
   }
 
-  /**
-   * Execute a list of AI-decided actions sequentially.
-   */
   async executeAll(actions: AIAction[]): Promise<void> {
     for (let i = 0; i < actions.length; i++) {
       const action = actions[i];
-      logger.info(`Executing action [${i + 1}/${actions.length}]: ${action.type} - ${action.reason}`);
+      logger.info(`执行操作 [${i + 1}/${actions.length}]: ${action.type} - ${action.reason}`);
       try {
         await this.execute(action);
-        // Small delay between actions for page stability
         await this.page.waitForTimeout(500);
       } catch (error) {
-        logger.error(`Action failed [${action.type}]: ${error}`);
-        // Continue with next action instead of stopping entirely
+        logger.error(`操作失败 [${action.type}]: ${error}`);
       }
     }
   }
@@ -51,46 +46,46 @@ export class ActionExecutor {
         await this.handleSendMessage(action);
         break;
       case 'done':
-        logger.info('AI signaled project completion');
+        logger.info('AI 发出项目完成信号');
         break;
       default:
-        logger.warn(`Unknown action type: ${action.type}`);
+        logger.warn(`未知操作类型: ${action.type}`);
     }
   }
 
   private async handleClick(action: AIAction): Promise<void> {
-    if (!action.selector) throw new Error('Click action requires a selector');
+    if (!action.selector) throw new Error('点击操作需要指定选择器');
     await this.page.waitForSelector(action.selector, { timeout: 10000 });
     await this.page.click(action.selector);
-    logger.info(`Clicked: ${action.selector}`);
+    logger.info(`已点击: ${action.selector}`);
   }
 
   private async handleFill(action: AIAction): Promise<void> {
-    if (!action.selector) throw new Error('Fill action requires a selector');
-    if (action.value === undefined) throw new Error('Fill action requires a value');
+    if (!action.selector) throw new Error('填充操作需要指定选择器');
+    if (action.value === undefined) throw new Error('填充操作需要指定值');
     await this.page.waitForSelector(action.selector, { timeout: 10000 });
     await this.page.fill(action.selector, action.value);
-    logger.info(`Filled "${action.selector}" with ${action.value.length} chars`);
+    logger.info(`已填充 "${action.selector}"，共 ${action.value.length} 个字符`);
   }
 
   private async handleType(action: AIAction): Promise<void> {
-    if (!action.selector) throw new Error('Type action requires a selector');
-    if (action.value === undefined) throw new Error('Type action requires a value');
+    if (!action.selector) throw new Error('输入操作需要指定选择器');
+    if (action.value === undefined) throw new Error('输入操作需要指定值');
     await this.page.waitForSelector(action.selector, { timeout: 10000 });
     await this.page.click(action.selector);
     await this.page.keyboard.type(action.value, { delay: 30 });
-    logger.info(`Typed ${action.value.length} chars into "${action.selector}"`);
+    logger.info(`已输入 ${action.value.length} 个字符到 "${action.selector}"`);
   }
 
   private async handleNavigate(action: AIAction): Promise<void> {
-    if (!action.url) throw new Error('Navigate action requires a url');
+    if (!action.url) throw new Error('导航操作需要指定 URL');
     await this.page.goto(action.url, { waitUntil: 'networkidle' });
-    logger.info(`Navigated to: ${action.url}`);
+    logger.info(`已导航至: ${action.url}`);
   }
 
   private async handleWait(action: AIAction): Promise<void> {
     const duration = action.duration || 3000;
-    logger.info(`Waiting ${duration}ms...`);
+    logger.info(`等待 ${duration} 毫秒...`);
     await this.page.waitForTimeout(duration);
   }
 
@@ -100,17 +95,12 @@ export class ActionExecutor {
     } else {
       await this.page.evaluate(() => window.scrollBy(0, 500));
     }
-    logger.info('Scrolled page');
+    logger.info('已滚动页面');
   }
 
-  /**
-   * Send a message in MonkeyCode's chat interface.
-   * Finds the chat input, types the message, and presses Enter.
-   */
   private async handleSendMessage(action: AIAction): Promise<void> {
-    if (!action.value) throw new Error('send_message action requires a value');
+    if (!action.value) throw new Error('发送消息操作需要指定内容');
 
-    // Try common chat input selectors
     const chatInputSelectors = [
       'textarea[placeholder*="message"]',
       'textarea[placeholder*="Message"]',
@@ -126,17 +116,15 @@ export class ActionExecutor {
         const el = await this.page.$(selector);
         if (el) {
           await el.click();
-          // Use fill for textarea, keyboard.type for contenteditable
           const tagName = await el.evaluate((e) => e.tagName.toLowerCase());
           if (tagName === 'textarea' || tagName === 'input') {
             await el.fill(action.value);
           } else {
             await this.page.keyboard.type(action.value, { delay: 20 });
           }
-          // Press Enter or click send button to submit
           await this.page.keyboard.press('Enter');
           inputFound = true;
-          logger.info(`Sent message (${action.value.length} chars) via "${selector}"`);
+          logger.info(`已发送消息（${action.value.length} 个字符），通过 "${selector}"`);
           break;
         }
       } catch {
@@ -145,10 +133,9 @@ export class ActionExecutor {
     }
 
     if (!inputFound) {
-      throw new Error('Could not find chat input element');
+      throw new Error('无法找到聊天输入框');
     }
 
-    // Wait for response to start appearing
     await this.page.waitForTimeout(3000);
   }
 }

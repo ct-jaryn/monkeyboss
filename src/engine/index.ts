@@ -39,37 +39,31 @@ export class TaskEngine {
       startedAt: new Date(),
       lastActivityAt: new Date(),
       status: 'running',
-      statusSummary: 'Initializing...',
+      statusSummary: '初始化中...',
       errors: [],
     };
   }
 
-  /**
-   * Start the main task loop. Runs until project is complete or max iterations reached.
-   */
   async start(): Promise<void> {
     this.running = true;
-    logger.info('=== MonkeyBoss Task Engine Starting ===');
-    logger.info(`Project: ${this.config.task.projectName}`);
-    logger.info(`Task: ${this.config.task.description}`);
-    logger.info(`Max iterations: ${this.config.task.maxIterations}`);
+    logger.info('=== MonkeyBoss 任务引擎启动 ===');
+    logger.info(`项目: ${this.config.task.projectName}`);
+    logger.info(`任务: ${this.config.task.description}`);
+    logger.info(`最大迭代次数: ${this.config.task.maxIterations}`);
 
-    // Ensure screenshot directory exists
     if (!fs.existsSync(this.screenshotDir)) {
       fs.mkdirSync(this.screenshotDir, { recursive: true });
     }
 
     try {
-      // Phase 1: Launch browser and authenticate
       await this.browserEngine.launch();
       const page = this.browserEngine.getPage();
       this.scraper.attachConsoleListener(page);
       await this.auth.login(page);
 
-      // Phase 2: Main task loop
       await this.runLoop();
     } catch (error) {
-      logger.error(`Task engine fatal error: ${error}`);
+      logger.error(`任务引擎致命错误: ${error}`);
       this.state.status = 'failed';
       this.state.errors.push(String(error));
     } finally {
@@ -80,20 +74,16 @@ export class TaskEngine {
   private async runLoop(): Promise<void> {
     while (this.running && this.state.iteration < this.config.task.maxIterations) {
       this.state.iteration++;
-      logger.info(`\n--- Iteration ${this.state.iteration} ---`);
+      logger.info(`\n--- 第 ${this.state.iteration} 次迭代 ---`);
 
       try {
-        // Ensure browser is still alive
         await this.browserEngine.ensureAlive();
         const page = this.browserEngine.getPage();
 
-        // Re-authenticate if needed
         await this.auth.ensureAuthenticated(page);
 
-        // Scrape current page state
         const pageState = await this.scraper.scrape(page);
 
-        // Ask AI what to do
         const aiResponse = await this.aiBridge.decide(
           pageState,
           this.buildTaskContext()
@@ -102,23 +92,19 @@ export class TaskEngine {
         this.state.statusSummary = aiResponse.statusSummary;
         this.state.lastActivityAt = new Date();
 
-        // Check if project is complete
         if (aiResponse.isProjectComplete) {
-          logger.info('=== PROJECT COMPLETE ===');
-          logger.info(`Summary: ${aiResponse.statusSummary}`);
+          logger.info('=== 项目已完成 ===');
+          logger.info(`摘要: ${aiResponse.statusSummary}`);
           this.state.status = 'completed';
           this.running = false;
           break;
         }
 
-        // Execute AI-decided actions
         const executor = new ActionExecutor(page);
         await executor.executeAll(aiResponse.actions);
 
-        // Wait for page to settle after actions
         await page.waitForTimeout(this.config.task.loopInterval);
 
-        // Periodic screenshot for debugging
         if (this.state.iteration % 10 === 0) {
           const screenshotPath = path.join(
             this.screenshotDir,
@@ -127,36 +113,34 @@ export class TaskEngine {
           await this.browserEngine.screenshot(screenshotPath);
         }
 
-        // Log progress
         this.logProgress();
       } catch (error) {
         const errMsg = String(error);
-        logger.error(`Iteration ${this.state.iteration} error: ${errMsg}`);
+        logger.error(`第 ${this.state.iteration} 次迭代出错: ${errMsg}`);
         this.state.errors.push(errMsg);
 
-        // If too many consecutive errors, pause and retry
         if (this.state.errors.length > 10) {
-          logger.warn('Too many errors, pausing for 30 seconds...');
+          logger.warn('错误过多，暂停 30 秒后重试...');
           await new Promise((r) => setTimeout(r, 30000));
-          this.state.errors = []; // Reset error counter
-          this.aiBridge.resetHistory(); // Reset AI context
+          this.state.errors = [];
+          this.aiBridge.resetHistory();
         }
       }
     }
 
     if (this.state.iteration >= this.config.task.maxIterations) {
-      logger.warn(`Reached max iterations (${this.config.task.maxIterations})`);
+      logger.warn(`已达到最大迭代次数（${this.config.task.maxIterations}）`);
       this.state.status = 'paused';
     }
   }
 
   private buildTaskContext(): string {
-    return `Project: ${this.config.task.projectName}
-Description: ${this.config.task.description}
-Iteration: ${this.state.iteration}/${this.config.task.maxIterations}
-Running since: ${this.state.startedAt.toISOString()}
-Last activity: ${this.state.lastActivityAt.toISOString()}
-Current status: ${this.state.statusSummary}`;
+    return `项目: ${this.config.task.projectName}
+描述: ${this.config.task.description}
+迭代: ${this.state.iteration}/${this.config.task.maxIterations}
+启动时间: ${this.state.startedAt.toISOString()}
+最后活动: ${this.state.lastActivityAt.toISOString()}
+当前状态: ${this.state.statusSummary}`;
   }
 
   private logProgress(): void {
@@ -164,29 +148,23 @@ Current status: ${this.state.statusSummary}`;
     const hours = Math.floor(elapsed / 3600000);
     const minutes = Math.floor((elapsed % 3600000) / 60000);
     logger.info(
-      `Progress: iteration ${this.state.iteration}, ` +
-      `running ${hours}h ${minutes}m, ` +
-      `status: ${this.state.statusSummary}`
+      `进度: 第 ${this.state.iteration} 次迭代, ` +
+      `已运行 ${hours}小时${minutes}分钟, ` +
+      `状态: ${this.state.statusSummary}`
     );
   }
 
-  /**
-   * Graceful shutdown.
-   */
   async shutdown(): Promise<void> {
     this.running = false;
-    logger.info('Shutting down task engine...');
+    logger.info('正在关闭任务引擎...');
     await this.browserEngine.close();
-    logger.info(`Final state: ${this.state.status}, iterations: ${this.state.iteration}`);
-    logger.info(`Errors encountered: ${this.state.errors.length}`);
+    logger.info(`最终状态: ${this.state.status}, 迭代次数: ${this.state.iteration}`);
+    logger.info(`累计错误: ${this.state.errors.length} 个`);
   }
 
-  /**
-   * Stop the loop (can be called from signal handlers).
-   */
   stop(): void {
     this.running = false;
-    logger.info('Stop signal received');
+    logger.info('收到停止信号');
   }
 
   getState(): TaskState {

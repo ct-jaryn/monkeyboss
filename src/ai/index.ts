@@ -82,7 +82,7 @@ export class AIBridge {
    * Send page state to AI and get back a list of actions.
    */
   async decide(pageState: PageState, taskDescription: string): Promise<AIResponse> {
-    logger.info('Sending page state to AI for decision...');
+    logger.info('正在将页面状态发送给 AI 进行决策...');
 
     const userMessage = this.buildUserMessage(pageState, taskDescription);
 
@@ -105,24 +105,23 @@ export class AIBridge {
       });
 
       const content = response.choices[0]?.message?.content;
-      if (!content) throw new Error('Empty AI response');
+      if (!content) throw new Error('AI 返回为空');
 
       this.conversationHistory.push({ role: 'assistant', content });
 
       const parsed = JSON.parse(content) as AIResponse;
-      logger.info(`AI decision: ${parsed.statusSummary}`);
-      logger.info(`AI thinking: ${parsed.thinking.slice(0, 200)}...`);
-      logger.info(`Actions to execute: ${parsed.actions.length}`);
+      logger.info(`AI 决策: ${parsed.statusSummary}`);
+      logger.info(`AI 思考: ${parsed.thinking.slice(0, 200)}...`);
+      logger.info(`待执行操作: ${parsed.actions.length} 个`);
 
       return parsed;
     } catch (error) {
-      logger.error(`AI decision failed: ${error}`);
-      // Return a safe fallback: wait and retry
+      logger.error(`AI 决策失败: ${error}`);
       return {
-        thinking: 'AI call failed, waiting before retry',
-        actions: [{ type: 'wait', duration: 10000, reason: 'AI error, cooling down' }],
+        thinking: 'AI 调用失败，等待后重试',
+        actions: [{ type: 'wait', duration: 10000, reason: 'AI 出错，冷却等待' }],
         isProjectComplete: false,
-        statusSummary: 'AI error - waiting to retry',
+        statusSummary: 'AI 出错 - 等待重试',
       };
     }
   }
@@ -160,6 +159,6 @@ Analyze the page state and decide what actions to take next to progress the proj
    */
   resetHistory(): void {
     this.conversationHistory = [];
-    logger.info('AI conversation history reset');
+    logger.info('AI 对话历史已重置');
   }
 }

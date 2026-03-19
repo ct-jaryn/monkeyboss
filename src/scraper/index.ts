@@ -1,21 +1,13 @@
 import { Page } from 'playwright';
 import { logger } from '../utils/logger';
 
-/**
- * Structured page state sent to AI for decision making.
- */
 export interface PageState {
   url: string;
   title: string;
-  /** Simplified DOM text content */
   textContent: string;
-  /** Interactive elements on the page */
   interactiveElements: InteractiveElement[];
-  /** Console messages since last scrape */
   consoleLogs: string[];
-  /** Current visible text in the chat/editor area */
   chatContent: string;
-  /** Screenshot as base64 (optional, for vision models) */
   screenshotBase64?: string;
 }
 
@@ -32,24 +24,17 @@ export interface InteractiveElement {
 export class PageScraper {
   private consoleLogs: string[] = [];
 
-  /**
-   * Attach console listener to capture browser logs.
-   */
   attachConsoleListener(page: Page): void {
     page.on('console', (msg) => {
       this.consoleLogs.push(`[${msg.type()}] ${msg.text()}`);
-      // Keep only last 50 logs
       if (this.consoleLogs.length > 50) {
         this.consoleLogs = this.consoleLogs.slice(-50);
       }
     });
   }
 
-  /**
-   * Extract full page state for AI consumption.
-   */
   async scrape(page: Page, includeScreenshot = false): Promise<PageState> {
-    logger.info('Scraping page state...');
+    logger.info('正在采集页面状态...');
 
     const [url, title, textContent, interactiveElements, chatContent] = await Promise.all([
       page.url(),
@@ -73,12 +58,11 @@ export class PageScraper {
       state.screenshotBase64 = buffer.toString('base64');
     }
 
-    // Clear console logs after scrape
     this.consoleLogs = [];
 
     logger.info(
-      `Scraped: ${interactiveElements.length} interactive elements, ` +
-      `${textContent.length} chars text`
+      `采集完成: ${interactiveElements.length} 个交互元素, ` +
+      `${textContent.length} 字符文本`
     );
     return state;
   }
@@ -87,7 +71,6 @@ export class PageScraper {
     return page.evaluate(() => {
       const body = document.body;
       if (!body) return '';
-      // Get visible text, skip script/style
       const walker = document.createTreeWalker(
         body,
         NodeFilter.SHOW_TEXT,
@@ -113,7 +96,6 @@ export class PageScraper {
         const text = (node.textContent || '').trim();
         if (text) texts.push(text);
       }
-      // Limit to 8000 chars to fit in AI context
       return texts.join('\n').slice(0, 8000);
     });
   }
@@ -127,7 +109,7 @@ export class PageScraper {
           const style = window.getComputedStyle(el);
           return style.display !== 'none' && style.visibility !== 'hidden';
         })
-        .slice(0, 100) // Limit to 100 elements
+        .slice(0, 100)
         .map((el, index) => {
           const tag = el.tagName.toLowerCase();
           const buildSelector = (): string => {
@@ -160,13 +142,8 @@ export class PageScraper {
     });
   }
 
-  /**
-   * Extract content from MonkeyCode's chat/conversation area.
-   * This captures the AI assistant's messages and user messages.
-   */
   private async extractChatContent(page: Page): Promise<string> {
     return page.evaluate(() => {
-      // Try common chat container selectors
       const chatSelectors = [
         '[class*="chat"]',
         '[class*="message"]',

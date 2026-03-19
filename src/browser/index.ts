@@ -12,12 +12,8 @@ export class BrowserEngine {
     this.config = config;
   }
 
-  /**
-   * Launch browser in incognito (private) mode.
-   * Uses a fresh BrowserContext with no persistent storage.
-   */
   async launch(): Promise<void> {
-    logger.info('Launching browser in incognito mode...');
+    logger.info('正在启动浏览器（隐私模式）...');
     this.browser = await chromium.launch({
       headless: this.config.browser.headless,
       args: [
@@ -27,7 +23,6 @@ export class BrowserEngine {
       ],
     });
 
-    // Incognito context: no cookies, no cache, no storage carried over
     this.context = await this.browser.newContext({
       viewport: { width: 1920, height: 1080 },
       userAgent:
@@ -37,24 +32,24 @@ export class BrowserEngine {
 
     this.context.setDefaultTimeout(this.config.browser.timeout);
     this.page = await this.context.newPage();
-    logger.info('Browser launched successfully (incognito context)');
+    logger.info('浏览器启动成功（隐私上下文）');
   }
 
   getPage(): Page {
-    if (!this.page) throw new Error('Browser not launched. Call launch() first.');
+    if (!this.page) throw new Error('浏览器未启动，请先调用 launch()');
     return this.page;
   }
 
   getContext(): BrowserContext {
-    if (!this.context) throw new Error('Browser not launched. Call launch() first.');
+    if (!this.context) throw new Error('浏览器未启动，请先调用 launch()');
     return this.context;
   }
 
   async navigate(url: string): Promise<void> {
     const page = this.getPage();
-    logger.info(`Navigating to: ${url}`);
+    logger.info(`正在导航至: ${url}`);
     await page.goto(url, { waitUntil: 'networkidle' });
-    logger.info(`Page loaded: ${await page.title()}`);
+    logger.info(`页面已加载: ${await page.title()}`);
   }
 
   async screenshot(path?: string): Promise<Buffer> {
@@ -64,7 +59,7 @@ export class BrowserEngine {
       fullPage: true,
       type: 'png',
     });
-    if (path) logger.info(`Screenshot saved: ${path}`);
+    if (path) logger.info(`截图已保存: ${path}`);
     return buffer;
   }
 
@@ -78,19 +73,16 @@ export class BrowserEngine {
       await this.browser.close();
       this.browser = null;
     }
-    logger.info('Browser closed');
+    logger.info('浏览器已关闭');
   }
 
   isAlive(): boolean {
     return this.browser !== null && this.browser.isConnected();
   }
 
-  /**
-   * Restart browser if it crashed or disconnected.
-   */
   async ensureAlive(): Promise<void> {
     if (!this.isAlive()) {
-      logger.warn('Browser disconnected, restarting...');
+      logger.warn('浏览器已断开连接，正在重启...');
       await this.close();
       await this.launch();
     }

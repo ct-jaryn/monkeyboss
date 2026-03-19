@@ -63,10 +63,10 @@ export function loadConfig(): Config {
 
 export function validateConfig(config: Config): string[] {
   const errors: string[] = [];
-  if (!config.monkeycode.username) errors.push('MONKEYCODE_USERNAME is required');
-  if (!config.monkeycode.password) errors.push('MONKEYCODE_PASSWORD is required');
-  if (!config.ai.apiKey) errors.push('AI_API_KEY is required');
-  if (!config.task.projectName) errors.push('TASK_PROJECT_NAME is required');
-  if (!config.task.description) errors.push('TASK_DESCRIPTION is required');
+  if (!config.monkeycode.username) errors.push('MONKEYCODE_USERNAME 未配置（MonkeyCode 用户名）');
+  if (!config.monkeycode.password) errors.push('MONKEYCODE_PASSWORD 未配置（MonkeyCode 密码）');
+  if (!config.ai.apiKey) errors.push('AI_API_KEY 未配置（AI 服务密钥）');
+  if (!config.task.projectName) errors.push('TASK_PROJECT_NAME 未配置（项目名称）');
+  if (!config.task.description) errors.push('TASK_DESCRIPTION 未配置（任务描述）');
   return errors;
 }
