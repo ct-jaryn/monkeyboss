@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "MonkeyBoss Extension",
+  "version": "0.1.0",
+  "description": "Receive MonkeyBoss tasks and execute browser actions.",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": ["http://localhost:3000/*", "https://*/*", "http://*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*/*", "http://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

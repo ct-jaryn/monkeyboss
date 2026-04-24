@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MonkeyBoss Console</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1020;
+        --panel: rgba(15, 23, 42, 0.82);
+        --border: rgba(148, 163, 184, 0.2);
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-2: #22c55e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, Arial, sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 30%),
+          radial-gradient(circle at top right, rgba(34, 197, 94, 0.14), transparent 25%),
+          var(--bg);
+        color: var(--text);
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+      }
+
+      h1, h2, h3, p {
+        margin-top: 0;
+      }
+
+      .hero {
+        display: grid;
+        gap: 20px;
+        margin-bottom: 24px;
+      }
+
+      .hero-card,
+      .panel {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 20px 60px rgba(2, 6, 23, 0.25);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+      }
+
+      .stat {
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.55);
+      }
+
+      .label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .value {
+        font-size: 28px;
+        font-weight: 700;
+        margin-top: 8px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 20px;
+      }
+
+      form {
+        display: grid;
+        gap: 12px;
+      }
+
+      input,
+      select,
+      textarea,
+      button,
+      .button-link {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 12px 14px;
+        font: inherit;
+      }
+
+      input,
+      select,
+      textarea {
+        background: rgba(15, 23, 42, 0.72);
+        color: var(--text);
+      }
+
+      button,
+      .button-link {
+        cursor: pointer;
+        background: linear-gradient(135deg, var(--accent), #2563eb);
+        color: white;
+        font-weight: 600;
+      }
+
+      .button-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+      }
+
+      button.secondary {
+        background: linear-gradient(135deg, var(--accent-2), #059669);
+      }
+
+      .task-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .sync-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .sync-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+        background: rgba(15, 23, 42, 0.55);
+      }
+
+      .sync-card.synced {
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+
+      .sync-ok {
+        color: #86efac;
+        font-weight: 600;
+      }
+
+      .task {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+        background: rgba(15, 23, 42, 0.55);
+      }
+
+      .task-top {
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+
+      pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 10px 0 0;
+        color: #cbd5e1;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="hero-card">
+          <h1>MonkeyBoss Console</h1>
+          <p class="muted">服务端负责模型配置与任务编排，浏览器插件负责执行知乎、小红书等页面动作。</p>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+            <a class="button-link" href="/downloads/extension">下载插件 ZIP</a>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <div class="label">Extensions</div>
+              <div class="value" id="extensionsCount">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Tasks</div>
+              <div class="value" id="tasksCount">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Model</div>
+              <div class="value" id="modelName">-</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="layout">
+        <div class="panel">
+          <h2>任务编排</h2>
+          <form id="taskForm">
+            <input name="target" placeholder="目标平台，例如 zhihu / xiaohongshu" required />
+            <select name="action">
+              <option value="open_url">open_url</option>
+              <option value="like">like</option>
+              <option value="comment">comment</option>
+            </select>
+            <textarea name="payload" rows="6" placeholder='{"url":"https://www.zhihu.com/"}'></textarea>
+            <button type="submit">创建任务</button>
+          </form>
+          <p class="muted">`payload` 目前支持 `url`、`comment` 等字段，插件端会按动作类型执行。</p>
+        </div>
+
+        <div class="panel">
+          <h2>模型配置</h2>
+          <form id="configForm">
+            <input name="provider" placeholder="provider" required />
+            <input name="baseUrl" placeholder="base URL" required />
+            <input name="model" placeholder="model" required />
+            <input name="apiKey" placeholder="API key" />
+            <button class="secondary" type="submit">保存模型配置</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top: 20px;">
+        <h2>插件同步状态</h2>
+        <div id="syncSummary" class="muted">暂未检测到插件同步。</div>
+        <div id="extensionList" class="sync-list" style="margin-top: 12px;"></div>
+      </section>
+
+      <section class="panel" style="margin-top: 20px;">
+        <h2>任务列表</h2>
+        <div id="taskList" class="task-list"></div>
+      </section>
+    </main>
+
+    <script>
+      async function request(path, options) {
+        const response = await fetch(path, {
+          headers: { "Content-Type": "application/json" },
+          ...options,
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        return response.json();
+      }
+
+      function renderTasks(tasks) {
+        const root = document.getElementById("taskList");
+        root.innerHTML = tasks.map((task) => `
+          <article class="task">
+            <div class="task-top">
+              <strong>${task.target} / ${task.action}</strong>
+              <span class="badge">${task.status}</span>
+            </div>
+            <pre>${JSON.stringify(task.payload, null, 2)}</pre>
+          </article>
+        `).join("");
+      }
+
+      function formatTime(value) {
+        if (!value) {
+          return "-";
+        }
+
+        return new Date(value).toLocaleString("zh-CN", { hour12: false });
+      }
+
+      function renderExtensions(extensions) {
+        const summary = document.getElementById("syncSummary");
+        const root = document.getElementById("extensionList");
+
+        if (!extensions.length) {
+          summary.textContent = "暂未检测到插件同步。";
+          root.innerHTML = "";
+          return;
+        }
+
+        summary.textContent = `已有 ${extensions.length} 个插件同步到服务端。`;
+        root.innerHTML = extensions.map((extension) => `
+          <article class="sync-card ${extension.syncStatus}">
+            <div class="task-top">
+              <strong>${extension.extensionId}</strong>
+              <span class="badge sync-ok">${extension.syncMessage}</span>
+            </div>
+            <p class="muted" style="margin: 10px 0 0;">浏览器: ${extension.browser} | 版本: ${extension.version}</p>
+            <p style="margin: 8px 0 0;">最近同步时间: ${formatTime(extension.lastSyncAt)}</p>
+          </article>
+        `).join("");
+      }
+
+      async function loadData() {
+        const [health, config, tasks, extensions] = await Promise.all([
+          request("/api/health"),
+          request("/api/config/model"),
+          request("/api/tasks"),
+          request("/api/extensions"),
+        ]);
+
+        document.getElementById("extensionsCount").textContent = String(health.extensions);
+        document.getElementById("tasksCount").textContent = String(tasks.length);
+        document.getElementById("modelName").textContent = config.model || "-";
+
+        const form = document.getElementById("configForm");
+        form.provider.value = config.provider || "";
+        form.baseUrl.value = config.baseUrl || "";
+        form.model.value = config.model || "";
+        form.apiKey.value = config.apiKey || "";
+
+        renderExtensions(extensions);
+        renderTasks(tasks);
+      }
+
+      document.getElementById("taskForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const payloadText = form.payload.value.trim();
+        const payload = payloadText ? JSON.parse(payloadText) : {};
+
+        await request("/api/tasks", {
+          method: "POST",
+          body: JSON.stringify({
+            target: form.target.value,
+            action: form.action.value,
+            payload,
+          }),
+        });
+
+        form.reset();
+        await loadData();
+      });
+
+      document.getElementById("configForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+
+        await request("/api/config/model", {
+          method: "PUT",
+          body: JSON.stringify({
+            provider: form.provider.value,
+            baseUrl: form.baseUrl.value,
+            model: form.model.value,
+            apiKey: form.apiKey.value,
+          }),
+        });
+
+        await loadData();
+      });
+
+      loadData();
+      setInterval(loadData, 5000);
+    </script>
+  </body>
+  </html>

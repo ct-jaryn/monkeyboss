@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MonkeyBoss Extension</title>
+    <style>
+      body {
+        margin: 0;
+        width: 320px;
+        font-family: Arial, sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+
+      main {
+        padding: 16px;
+        display: grid;
+        gap: 12px;
+      }
+
+      input,
+      button {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        font: inherit;
+      }
+
+      input {
+        background: #111827;
+        color: #e2e8f0;
+      }
+
+      button {
+        background: #2563eb;
+        color: white;
+        cursor: pointer;
+      }
+
+      .secondary {
+        background: #059669;
+      }
+
+      #status {
+        color: #94a3b8;
+        min-height: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h3>MonkeyBoss</h3>
+      <input id="serverUrl" placeholder="Server URL" />
+      <input id="extensionId" placeholder="Extension ID" />
+      <div id="hint" style="color: #94a3b8; font-size: 12px; line-height: 1.5;"></div>
+      <button id="saveButton">保存配置</button>
+      <button id="syncButton" class="secondary">立即同步</button>
+      <div id="status"></div>
+      <script src="popup.js"></script>
+    </main>
+  </body>
+  </html>
