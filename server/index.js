@@ -103,6 +103,133 @@ function getTaskSummary(task) {
   };
 }
 
+function getModelConfigSummary() {
+  const { apiKey, ...safeConfig } = state.modelConfig;
+
+  return {
+    ...safeConfig,
+    hasApiKey: Boolean(apiKey),
+  };
+}
+
+function createTask(input) {
+  const now = new Date().toISOString();
+
+  return {
+    id: randomUUID(),
+    target: input.target || "generic",
+    action: input.action || "open_url",
+    payload: input.payload || {},
+    source: input.source || "manual",
+    prompt: input.prompt || "",
+    status: "pending",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function extractJsonObject(text) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("AI response does not contain a JSON object");
+  }
+
+  return JSON.parse(text.slice(start, end + 1));
+}
+
+function inferTaskFromPrompt(prompt) {
+  const text = prompt.toLowerCase();
+  const urlMatch = prompt.match(/https?:\/\/[^\s，。]+/);
+  const target = text.includes("小红书") || text.includes("xiaohongshu")
+    ? "xiaohongshu"
+    : text.includes("知乎") || text.includes("zhihu")
+      ? "zhihu"
+      : "generic";
+  const action = text.includes("评论") || text.includes("comment")
+    ? "comment"
+    : text.includes("点赞") || text.includes("喜欢") || text.includes("like")
+      ? "like"
+      : "open_url";
+  const payload = {};
+
+  if (urlMatch) {
+    payload.url = urlMatch[0];
+  } else if (target === "zhihu") {
+    payload.url = "https://www.zhihu.com/";
+  } else if (target === "xiaohongshu") {
+    payload.url = "https://www.xiaohongshu.com/explore";
+  }
+
+  if (action === "comment") {
+    const commentMatch = prompt.match(/[评论留言回复][：:]\s*(.+)$/);
+    payload.comment = commentMatch?.[1]?.trim() || "请在这里填写评论内容";
+  }
+
+  return { target, action, payload, reasoning: "未配置可用模型密钥，已使用本地规则生成任务。" };
+}
+
+function normalizeGeneratedTask(generated, prompt) {
+  const allowedActions = new Set(["open_url", "like", "comment"]);
+  const fallback = inferTaskFromPrompt(prompt);
+  const target = typeof generated.target === "string" && generated.target.trim()
+    ? generated.target.trim()
+    : fallback.target;
+  const action = allowedActions.has(generated.action) ? generated.action : fallback.action;
+  const payload = generated.payload && typeof generated.payload === "object" && !Array.isArray(generated.payload)
+    ? generated.payload
+    : fallback.payload;
+
+  return {
+    target,
+    action,
+    payload,
+    reasoning: generated.reasoning || fallback.reasoning,
+  };
+}
+
+async function generateTaskFromAi(prompt) {
+  if (!state.modelConfig.apiKey) {
+    return inferTaskFromPrompt(prompt);
+  }
+
+  const response = await fetch(`${state.modelConfig.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${state.modelConfig.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: state.modelConfig.model,
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content: [
+            "You convert browser-operation instructions into one JSON object.",
+            "Return only JSON with target, action, payload, reasoning.",
+            "action must be one of: open_url, like, comment.",
+            "payload may include url and comment. Do not include secrets.",
+          ].join(" "),
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`AI task generation failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || "";
+  return normalizeGeneratedTask(extractJsonObject(content), prompt);
+}
+
 function getExtensionSummary(extension) {
   return {
     ...extension,
@@ -172,7 +299,7 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/api/config/model") {
-    sendJson(res, 200, state.modelConfig);
+    sendJson(res, 200, getModelConfigSummary());
     return;
   }
 
@@ -185,7 +312,7 @@ const server = createServer(async (req, res) => {
       model: body.model || state.modelConfig.model,
       apiKey: body.apiKey || state.modelConfig.apiKey,
     };
-    sendJson(res, 200, state.modelConfig);
+    sendJson(res, 200, getModelConfigSummary());
     return;
   }
 
@@ -223,17 +350,36 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "POST" && url.pathname === "/api/tasks") {
     const body = await readJsonBody(req);
-    const task = {
-      id: randomUUID(),
-      target: body.target || "generic",
-      action: body.action || "open_url",
-      payload: body.payload || {},
-      status: "pending",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const task = createTask(body);
     state.tasks.unshift(task);
     sendJson(res, 201, task);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/ai/tasks") {
+    const body = await readJsonBody(req);
+    const prompt = String(body.prompt || "").trim();
+
+    if (!prompt) {
+      sendJson(res, 400, { error: "prompt_required" });
+      return;
+    }
+
+    try {
+      const generated = await generateTaskFromAi(prompt);
+      const task = createTask({
+        ...generated,
+        source: state.modelConfig.apiKey ? "ai" : "local_inference",
+        prompt,
+      });
+      state.tasks.unshift(task);
+      sendJson(res, 201, { task, reasoning: generated.reasoning || "" });
+    } catch (error) {
+      sendJson(res, 502, {
+        error: "ai_task_generation_failed",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
     return;
   }
 

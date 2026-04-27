@@ -7,16 +7,42 @@
     <style>
       body {
         margin: 0;
-        width: 320px;
-        font-family: Arial, sans-serif;
-        background: #0f172a;
+        width: 340px;
+        font-family: Inter, Arial, sans-serif;
+        background:
+          radial-gradient(circle at 0% 0%, rgba(96, 165, 250, 0.24), transparent 32%),
+          #0f172a;
         color: #e2e8f0;
       }
 
       main {
-        padding: 16px;
         display: grid;
-        gap: 12px;
+        gap: 14px;
+        padding: 18px;
+      }
+
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h3 {
+        font-size: 20px;
+      }
+
+      .subtitle {
+        color: #94a3b8;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .card {
+        display: grid;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.7);
       }
 
       input,
@@ -31,30 +57,43 @@
       input {
         background: #111827;
         color: #e2e8f0;
+        outline: none;
+      }
+
+      input:focus {
+        border-color: rgba(96, 165, 250, 0.75);
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.14);
       }
 
       button {
-        background: #2563eb;
+        background: linear-gradient(135deg, #60a5fa, #2563eb);
         color: white;
         cursor: pointer;
+        font-weight: 700;
       }
 
       .secondary {
-        background: #059669;
+        background: linear-gradient(135deg, #2dd4bf, #0f766e);
       }
 
       #status {
         color: #94a3b8;
         min-height: 18px;
+        line-height: 1.5;
       }
     </style>
   </head>
   <body>
     <main>
-      <h3>MonkeyBoss</h3>
-      <input id="serverUrl" placeholder="Server URL" />
-      <input id="extensionId" placeholder="Extension ID" />
-      <div id="hint" style="color: #94a3b8; font-size: 12px; line-height: 1.5;"></div>
+      <div>
+        <h3>MonkeyBoss</h3>
+        <p class="subtitle">连接控制台并同步待执行任务。</p>
+      </div>
+      <section class="card">
+        <input id="serverUrl" placeholder="Server URL" />
+        <input id="extensionId" placeholder="Extension ID" />
+        <div id="hint" class="subtitle"></div>
+      </section>
       <button id="saveButton">保存配置</button>
       <button id="syncButton" class="secondary">立即同步</button>
       <div id="status"></div>

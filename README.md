@@ -63,10 +63,15 @@ npm run dev
 
 - 下载插件 ZIP
 - 配置模型参数
+- 模型 API key 安全保存，页面不会回显已保存密钥
+- 输入自然语言指令，由 AI 生成结构化浏览器任务
 - 创建任务
+- 使用任务模板快速创建知乎、小红书和评论动作
+- 按任务状态筛选任务列表
 - 查看任务列表
 - 查看插件同步状态
 - 查看最近同步时间和基础插件信息
+- 手动刷新控制台状态并自动定时刷新
 
 ## 插件加载方式
 
@@ -109,6 +114,35 @@ npm run dev
 - 一个可直接操作的服务端管理页面
 - 服务端直接下载插件 ZIP：`GET /downloads/extension`
 - 插件轮询服务端并执行 `open_url` 动作
+- 插件支持执行 `like` 和 `comment` 页面动作，会在目标页面内尝试点击按钮或填入文本
+
+## AI 任务生成
+
+控制台支持在“AI 指令生成任务”区域输入自然语言，例如：
+
+```text
+打开 https://www.zhihu.com/ 并点赞第一条内容
+```
+
+服务端会调用已配置的模型，把自然语言转换为结构化任务：
+
+```json
+{
+  "target": "zhihu",
+  "action": "like",
+  "payload": {
+    "url": "https://www.zhihu.com/"
+  }
+}
+```
+
+如果还没有配置模型密钥，服务端会使用本地规则兜底生成基础任务，便于先验证完整链路。
+
+插件当前支持的动作：
+
+- `open_url`：打开目标页面
+- `like`：打开页面后尝试点击文本或无障碍标签中包含“赞”“喜欢”“like”“upvote”的按钮
+- `comment`：打开页面后尝试找到可输入文本的评论框并填入 `payload.comment`
 
 ## API 概览
 
@@ -120,6 +154,7 @@ npm run dev
 - `GET /api/extensions/next-task`：插件拉取下一条任务
 - `GET /api/tasks`：获取任务列表
 - `POST /api/tasks`：创建任务
+- `POST /api/ai/tasks`：使用自然语言生成并创建任务
 - `POST /api/tasks/:id/result`：插件回传任务结果
 - `GET /downloads/extension`：下载插件压缩包
 

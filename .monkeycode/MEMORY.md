@@ -74,3 +74,28 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
 - Instructions:
   - 服务端使用插件状态字段 `lastSyncAt`、`syncStatus` 表示最近同步状态。
   - 控制台页面展示“已同步到服务端”和最近同步时间，便于确认插件已连通。
+
+[monkeyboss 配置接口安全约定]
+- Date: 2026-04-24
+- Context: Agent 在执行“启动项目 完善功能和设计优化交互与ui”时发现
+- Category: 代码模式
+- Instructions:
+  - `GET /api/config/model` 只返回模型配置摘要和 `hasApiKey`，不回显已保存的 `apiKey`。
+  - 控制台的 API key 输入框留空表示不修改已保存密钥，避免把密钥重新暴露到页面。
+
+[monkeyboss 控制台交互模式]
+- Date: 2026-04-24
+- Context: Agent 在执行“启动项目 完善功能和设计优化交互与ui”时发现
+- Category: 代码模式
+- Instructions:
+  - 控制台首页承担管理入口，包含任务模板、任务状态筛选、插件同步状态、模型配置和手动刷新。
+  - 前端页面继续保持原生 HTML/CSS/JavaScript 实现，静态文件由 `server/index.js` 从 `server/public` 目录提供。
+
+[monkeyboss AI 任务链路]
+- Date: 2026-04-24
+- Context: Agent 在执行“服务端支持写一个任务告诉ai后，插件操作浏览器执行”时发现
+- Category: 代码模式
+- Instructions:
+  - 服务端提供 `POST /api/ai/tasks`，接收自然语言 `prompt`，调用模型生成 `target`、`action`、`payload` 后写入任务队列。
+  - 未配置模型密钥时，服务端使用本地规则从指令中推断 `open_url`、`like`、`comment` 基础任务。
+  - 插件后台轮询任务后，`open_url` 直接打开页面，`like` 和 `comment` 会转发给 content script 在页面内尝试执行。

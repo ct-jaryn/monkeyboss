@@ -55,12 +55,56 @@ async function reportResult(serverUrl, taskId, payload) {
   }
 }
 
+function wait(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function openTaskTab(payload) {
+  if (!payload?.url) {
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    if (!activeTab?.id) {
+      throw new Error("Task requires payload.url or an active browser tab");
+    }
+
+    return activeTab;
+  }
+
+  return chrome.tabs.create({ url: payload.url, active: true });
+}
+
+async function waitForTabComplete(tabId) {
+  for (let index = 0; index < 20; index += 1) {
+    const tab = await chrome.tabs.get(tabId);
+
+    if (tab.status === "complete") {
+      await wait(800);
+      return;
+    }
+
+    await wait(500);
+  }
+}
+
+async function executePageAction(action, payload) {
+  const tab = await openTaskTab(payload);
+  await waitForTabComplete(tab.id);
+
+  return chrome.tabs.sendMessage(tab.id, {
+    type: "execute-page-action",
+    action,
+    payload,
+  });
+}
+
 async function executeTask(task) {
   const { serverUrl } = await getSettings();
 
   try {
     if (task.action === "open_url" && task.payload?.url) {
-      await chrome.tabs.create({ url: task.payload.url, active: false });
+      await chrome.tabs.create({ url: task.payload.url, active: true });
       await reportResult(serverUrl, task.id, {
         status: "completed",
         result: { message: "Opened target url", data: task.payload },
@@ -68,12 +112,24 @@ async function executeTask(task) {
       return;
     }
 
+    if (task.action === "like" || task.action === "comment") {
+      const result = await executePageAction(task.action, task.payload || {});
+
+      await reportResult(serverUrl, task.id, {
+        status: result?.ok ? "completed" : "failed",
+        result: result || {},
+        error: result?.ok ? null : result?.error || "Page action failed",
+      });
+      return;
+    }
+
     await reportResult(serverUrl, task.id, {
-      status: "completed",
+      status: "failed",
       result: {
-        message: `Stub executed for action ${task.action}`,
+        message: `Unsupported action ${task.action}`,
         data: task.payload || {},
       },
+      error: `Unsupported action ${task.action}`,
     });
   } catch (error) {
     await reportResult(serverUrl, task.id, {
